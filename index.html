@@ -1,0 +1,165 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Football statistics, match analysis and data-driven forecasts.">
+  <title>Foobmob | Football Analysis</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0b1220;
+      color: #f1f5f9;
+    }
+
+    header {
+      padding: 22px 7%;
+      background: #111c30;
+      border-bottom: 1px solid #26354c;
+    }
+
+    header h1 {
+      color: #38d996;
+      margin: 0;
+    }
+
+    nav {
+      margin-top: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+    }
+
+    nav a {
+      color: #e2e8f0;
+      text-decoration: none;
+    }
+
+    main {
+      max-width: 1000px;
+      margin: auto;
+      padding: 45px 20px;
+    }
+
+    .hero {
+      padding: 35px 0;
+    }
+
+    .hero h2 {
+      font-size: clamp(30px, 6vw, 48px);
+      margin-bottom: 12px;
+    }
+
+    .hero p {
+      color: #b7c4d8;
+      line-height: 1.7;
+    }
+
+    .tag {
+      color: #38d996;
+      font-weight: bold;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+      margin-top: 25px;
+    }
+
+    .card {
+      background: #152238;
+      border: 1px solid #2b3b53;
+      padding: 22px;
+      border-radius: 12px;
+    }
+
+    .card h3 {
+      color: #38d996;
+    }
+
+    .card p {
+      color: #c2cede;
+      line-height: 1.6;
+    }
+
+    .notice {
+      margin-top: 28px;
+      padding: 16px;
+      background: #102b29;
+      border-radius: 8px;
+      color: #a7f3d0;
+    }
+
+    footer {
+      text-align: center;
+      padding: 25px;
+      color: #94a3b8;
+      border-top: 1px solid #26354c;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>FOOBMOB</h1>
+    <nav>
+      <a href="#home">Home</a>
+      <a href="#analysis">Match Analysis</a>
+      <a href="#forecasts">Goal Forecasts</a>
+      <a href="#about">About</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" id="home">
+      <p class="tag">FOOTBALL DATA • FORM • PERFORMANCE</p>
+      <h2>Understand the game beyond the score.</h2>
+      <p>
+        Explore football results, team performance, scoring trends
+        and data-driven match forecasts in one place.
+      </p>
+    </section>
+
+    <section id="analysis">
+      <h2>Football Analysis</h2>
+      <div class="cards">
+        <article class="card">
+          <h3>Match Statistics</h3>
+          <p>Explore results, goals scored, goals conceded and team form.</p>
+        </article>
+        <article class="card">
+          <h3>Team Performance</h3>
+          <p>Compare teams using their recent results and scoring records.</p>
+        </article>
+        <article class="card" id="forecasts">
+          <h3>Goal Forecasts</h3>
+          <p>Our planned feature will estimate scoring patterns using historical data.</p>
+        </article>
+      </div>
+      <p class="notice">
+        Website setup in progress. Automatic football data will be
+        connected in a later development step.
+      </p>
+    </section>
+
+    <section id="about">
+      <h2>About Foobmob</h2>
+      <p>
+        Foobmob is a public football analytics project focused on
+        statistics, performance trends and evidence-based analysis.
+        Forecasts are estimates, not guarantees.
+      </p>
+    </section>
+  </main>
+
+  <footer>
+    © 2026 Foobmob Football Analysis
+  </footer>
+</body>
+</html>
