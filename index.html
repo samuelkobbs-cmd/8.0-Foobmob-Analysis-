@@ -4,12 +4,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Football statistics, match analysis and data-driven forecasts.">
-  <title>Foobmob | Football Analysis</title>
+  <title>Foobmob | Football Analytics</title>
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -19,147 +16,208 @@
     }
 
     header {
-      padding: 22px 7%;
+      padding: 22px 16px;
       background: #111c30;
-      border-bottom: 1px solid #26354c;
+      border-bottom: 2px solid #28c76f;
     }
 
     header h1 {
-      color: #38d996;
       margin: 0;
+      color: #28c76f;
+      font-size: 28px;
     }
 
-    nav {
-      margin-top: 18px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 18px;
-    }
-
-    nav a {
-      color: #e2e8f0;
-      text-decoration: none;
+    header p {
+      margin-bottom: 0;
+      color: #b9c5d6;
     }
 
     main {
-      max-width: 1000px;
+      max-width: 900px;
       margin: auto;
-      padding: 45px 20px;
+      padding: 20px 16px;
     }
 
-    .hero {
-      padding: 35px 0;
+    .section-title {
+      margin-top: 28px;
+      font-size: 21px;
     }
 
-    .hero h2 {
-      font-size: clamp(30px, 6vw, 48px);
-      margin-bottom: 12px;
+    .panel, .match {
+      background: #142137;
+      border: 1px solid #293953;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 14px;
     }
 
-    .hero p {
-      color: #b7c4d8;
+    .match h3 {
+      margin: 10px 0;
+      font-size: 17px;
+    }
+
+    .meta {
+      color: #b9c5d6;
+      font-size: 13px;
       line-height: 1.7;
     }
 
-    .tag {
-      color: #38d996;
+    .status {
+      color: #28c76f;
+      font-weight: bold;
+      font-size: 12px;
+    }
+
+    .score {
+      font-size: 20px;
       font-weight: bold;
     }
 
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 18px;
-      margin-top: 25px;
-    }
-
-    .card {
-      background: #152238;
-      border: 1px solid #2b3b53;
-      padding: 22px;
-      border-radius: 12px;
-    }
-
-    .card h3 {
-      color: #38d996;
-    }
-
-    .card p {
-      color: #c2cede;
-      line-height: 1.6;
-    }
-
-    .notice {
-      margin-top: 28px;
-      padding: 16px;
-      background: #102b29;
+    button {
+      background: #28c76f;
+      color: #07130c;
+      border: none;
       border-radius: 8px;
-      color: #a7f3d0;
+      padding: 11px 16px;
+      font-weight: bold;
+      cursor: pointer;
     }
+
+    .muted { color: #b9c5d6; }
+    .error { color: #ff8585; }
 
     footer {
       text-align: center;
-      padding: 25px;
-      color: #94a3b8;
-      border-top: 1px solid #26354c;
+      color: #9aa9bd;
+      padding: 24px 12px;
+      font-size: 12px;
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>FOOBMOB</h1>
-    <nav>
-      <a href="#home">Home</a>
-      <a href="#analysis">Match Analysis</a>
-      <a href="#forecasts">Goal Forecasts</a>
-      <a href="#about">About</a>
-    </nav>
+    <h1>Foobmob</h1>
+    <p>Football data, match analysis and goal forecasts.</p>
   </header>
 
   <main>
-    <section class="hero" id="home">
-      <p class="tag">FOOTBALL DATA • FORM • PERFORMANCE</p>
-      <h2>Understand the game beyond the score.</h2>
-      <p>
-        Explore football results, team performance, scoring trends
-        and data-driven match forecasts in one place.
+    <section class="panel">
+      <h2>Football Analytics</h2>
+      <p class="muted">
+        Explore fixtures and results using football data.
+        Forecasts will be developed from statistical evidence.
+      </p>
+      <button id="refresh">Refresh matches</button>
+      <p id="message" class="meta" aria-live="polite">
+        Connecting to football data...
       </p>
     </section>
 
-    <section id="analysis">
-      <h2>Football Analysis</h2>
-      <div class="cards">
-        <article class="card">
-          <h3>Match Statistics</h3>
-          <p>Explore results, goals scored, goals conceded and team form.</p>
-        </article>
-        <article class="card">
-          <h3>Team Performance</h3>
-          <p>Compare teams using their recent results and scoring records.</p>
-        </article>
-        <article class="card" id="forecasts">
-          <h3>Goal Forecasts</h3>
-          <p>Our planned feature will estimate scoring patterns using historical data.</p>
-        </article>
-      </div>
-      <p class="notice">
-        Website setup in progress. Automatic football data will be
-        connected in a later development step.
-      </p>
-    </section>
+    <h2 class="section-title">Matches</h2>
+    <div id="matches">
+      <p class="muted">Loading matches...</p>
+    </div>
 
-    <section id="about">
-      <h2>About Foobmob</h2>
-      <p>
-        Foobmob is a public football analytics project focused on
-        statistics, performance trends and evidence-based analysis.
-        Forecasts are estimates, not guarantees.
+    <h2 class="section-title">Goal Analysis</h2>
+    <section class="panel">
+      <p class="muted">
+        Goal forecasts are not available yet. This section will use
+        historical results and a statistical model rather than guesses.
       </p>
     </section>
   </main>
 
   <footer>
-    © 2026 Foobmob Football Analysis
+    Foobmob Football Analytics · Data provided by football-data.org
   </footer>
+
+  <script>
+    const matchesBox = document.getElementById("matches");
+    const message = document.getElementById("message");
+    const refreshButton = document.getElementById("refresh");
+
+    function formatDate(dateString) {
+      return new Date(dateString).toLocaleString("en-GB", {
+        dateStyle: "medium",
+        timeStyle: "short",
+        timeZone: "Africa/Accra"
+      }) + " GMT";
+    }
+
+    function escapeHTML(value) {
+      return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      })[char]);
+    }
+
+    async function loadMatches() {
+      refreshButton.disabled = true;
+      message.textContent = "Loading match data...";
+      matchesBox.innerHTML = "";
+
+      try {
+        const response = await fetch("/api/matches");
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Could not load matches.");
+        }
+
+        const matches = data.matches || [];
+
+        message.textContent =
+          "Data retrieved successfully · " + matches.length + " match(es)";
+
+        if (matches.length === 0) {
+          matchesBox.innerHTML =
+            '<div class="panel">No matches were returned by the data service.</div>';
+          return;
+        }
+
+        matchesBox.innerHTML = matches.map(match => {
+          const home = escapeHTML(match.homeTeam?.name || "Home team");
+          const away = escapeHTML(match.awayTeam?.name || "Away team");
+          const competition = escapeHTML(match.competition?.name || "Competition");
+          const status = escapeHTML(
+            (match.status || "UNKNOWN").replaceAll("_", " ")
+          );
+
+          const score = match.score?.fullTime;
+          const hasScore =
+            score?.home !== null && score?.home !== undefined &&
+            score?.away !== null && score?.away !== undefined;
+
+          return `
+            <article class="match">
+              <div class="meta">${competition}</div>
+              <h3>${home} vs ${away}</h3>
+              <p class="score">${hasScore
+                ? `${score.home} - ${score.away}`
+                : "vs"}</p>
+              <div class="status">${status}</div>
+              <p class="meta">Kickoff: ${formatDate(match.utcDate)}</p>
+            </article>
+          `;
+        }).join("");
+
+      } catch (error) {
+        message.textContent = "Unable to load match data.";
+        matchesBox.innerHTML =
+          '<div class="panel error">' +
+          escapeHTML(error.message) +
+          '<p class="muted">Try refreshing. If the problem continues, check the API endpoint.</p>' +
+          '</div>';
+      } finally {
+        refreshButton.disabled = false;
+      }
+    }
+
+    refreshButton.addEventListener("click", loadMatches);
+    loadMatches();
+  </script>
 </body>
 </html>
