@@ -8,83 +8,187 @@
   <style>
     * { box-sizing: border-box; }
 
+    :root {
+      --green: #28c76f;
+      --bg: #0b1220;
+      --panel: #142137;
+      --border: #293953;
+      --muted: #b9c5d6;
+    }
+
     body {
       margin: 0;
       font-family: Arial, sans-serif;
-      background: #0b1220;
+      background: var(--bg);
       color: #f1f5f9;
     }
 
     header {
       padding: 22px 16px;
       background: #111c30;
-      border-bottom: 2px solid #28c76f;
+      border-bottom: 2px solid var(--green);
     }
 
     header h1 {
       margin: 0;
-      color: #28c76f;
-      font-size: 28px;
+      color: var(--green);
+      font-size: 30px;
     }
 
     header p {
       margin-bottom: 0;
-      color: #b9c5d6;
+      color: var(--muted);
     }
 
     main {
-      max-width: 900px;
+      max-width: 1050px;
       margin: auto;
       padding: 20px 16px;
     }
 
     .section-title {
-      margin-top: 28px;
+      margin-top: 30px;
       font-size: 21px;
     }
 
-    .panel, .match {
-      background: #142137;
-      border: 1px solid #293953;
+    .panel, .match, .team-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
       border-radius: 12px;
       padding: 16px;
       margin-bottom: 14px;
     }
 
-    .match h3 {
-      margin: 10px 0;
-      font-size: 17px;
+    .muted, .meta { color: var(--muted); }
+    .meta { font-size: 13px; line-height: 1.7; }
+    .status { color: var(--green); font-weight: bold; font-size: 12px; }
+    .error { color: #ff8585; }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: end;
+      margin-top: 18px;
     }
 
-    .meta {
-      color: #b9c5d6;
+    .field {
+      flex: 1;
+      min-width: 190px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 7px;
       font-size: 13px;
-      line-height: 1.7;
+      color: var(--muted);
     }
 
-    .status {
-      color: #28c76f;
-      font-weight: bold;
-      font-size: 12px;
+    select, button {
+      width: 100%;
+      min-height: 42px;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font: inherit;
     }
 
-    .score {
-      font-size: 20px;
-      font-weight: bold;
+    select {
+      background: #0b1220;
+      color: #f1f5f9;
+      border: 1px solid #40516d;
     }
 
     button {
-      background: #28c76f;
+      background: var(--green);
       color: #07130c;
       border: none;
-      border-radius: 8px;
-      padding: 11px 16px;
       font-weight: bold;
       cursor: pointer;
     }
 
-    .muted { color: #b9c5d6; }
-    .error { color: #ff8585; }
+    button:disabled {
+      opacity: .6;
+      cursor: wait;
+    }
+
+    .button-field { flex: 0 1 150px; min-width: 130px; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+    }
+
+    .stat {
+      background: #0e192b;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+    }
+
+    .stat-label { color: var(--muted); font-size: 12px; }
+    .stat-value { font-size: 25px; font-weight: bold; margin-top: 8px; }
+    .green { color: var(--green); }
+
+    .match h3, .team-card h3 {
+      margin: 10px 0;
+      font-size: 17px;
+    }
+
+    .score { font-size: 20px; font-weight: bold; }
+
+    .team-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 12px;
+    }
+
+    .team-card { margin: 0; }
+    .team-card p { margin: 7px 0; font-size: 13px; }
+
+    .form-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .form-badge {
+      border-radius: 5px;
+      padding: 5px 8px;
+      font-size: 12px;
+      font-weight: bold;
+      background: #293953;
+    }
+
+    .win { color: #7cf0a9; }
+    .draw { color: #f6d365; }
+    .loss { color: #ff8585; }
+
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 540px;
+      font-size: 13px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 12px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th { color: var(--muted); }
+
+    .empty {
+      padding: 18px;
+      text-align: center;
+      color: var(--muted);
+      background: var(--panel);
+      border-radius: 10px;
+    }
 
     footer {
       text-align: center;
@@ -92,37 +196,116 @@
       padding: 24px 12px;
       font-size: 12px;
     }
+
+    @media (max-width: 500px) {
+      header h1 { font-size: 26px; }
+      main { padding: 16px 12px; }
+      .button-field { flex: 1 1 100%; }
+    }
   </style>
 </head>
 <body>
   <header>
     <h1>Foobmob</h1>
-    <p>Football data, match analysis and goal forecasts.</p>
+    <p>Football data, match analysis and statistical insights.</p>
   </header>
 
   <main>
     <section class="panel">
       <h2>Football Analytics</h2>
       <p class="muted">
-        Explore fixtures and results using football data.
-        Forecasts will be developed from statistical evidence.
+        Explore fixtures, historical results, team performance
+        and goal-scoring statistics.
       </p>
-      <button id="refresh">Refresh matches</button>
-      <p id="message" class="meta" aria-live="polite">
-        Connecting to football data...
+
+      <div class="controls">
+        <div class="field">
+          <label for="competition">Competition</label>
+          <select id="competition">
+            <option value="PL">Premier League</option>
+            <option value="CL">Champions League</option>
+            <option value="BL1">Bundesliga</option>
+            <option value="SA">Serie A</option>
+            <option value="FL1">Ligue 1</option>
+            <option value="DED">Eredivisie</option>
+            <option value="PPL">Primeira Liga</option>
+            <option value="ELC">Championship</option>
+            <option value="BSA">Brazilian Serie A</option>
+            <option value="CLI">Copa Libertadores</option>
+            <option value="PD">Primera Division</option>
+            <option value="EC">European Championship</option>
+            <option value="WC">FIFA World Cup</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="seasons">Historical seasons</label>
+          <select id="seasons">
+            <option value="1">One season</option>
+            <option value="2">Up to two seasons</option>
+            <option value="3" selected>Up to three seasons</option>
+          </select>
+        </div>
+
+        <div class="button-field">
+          <button id="loadStats">Load statistics</button>
+        </div>
+      </div>
+
+      <p id="statsMessage" class="meta" aria-live="polite">
+        Ready to load team statistics.
       </p>
     </section>
 
-    <h2 class="section-title">Matches</h2>
-    <div id="matches">
-      <p class="muted">Loading matches...</p>
-    </div>
+    <h2 class="section-title">Competition Overview</h2>
+    <section id="overview" class="stats-grid">
+      <div class="empty">Choose a competition and load statistics.</div>
+    </section>
 
-    <h2 class="section-title">Goal Analysis</h2>
+    <h2 class="section-title">Team Performance</h2>
+    <section class="panel">
+      <div class="field">
+        <label for="teamSelect">Inspect a team</label>
+        <select id="teamSelect" disabled>
+          <option value="">Load statistics first</option>
+        </select>
+      </div>
+      <div id="teamDetail" style="margin-top:18px">
+        <p class="muted">Team details will appear here.</p>
+      </div>
+    </section>
+
+    <h2 class="section-title">All Teams</h2>
+    <section class="panel">
+      <div class="table-wrap" id="teamTable">
+        <p class="muted">Team statistics will appear here.</p>
+      </div>
+    </section>
+
+    <h2 class="section-title">Matches</h2>
+    <section>
+      <button id="refreshMatches" style="width:auto;margin-bottom:14px">
+        Refresh matches
+      </button>
+      <p id="matchMessage" class="meta" aria-live="polite">
+        Connecting to football data...
+      </p>
+      <div id="matches">
+        <p class="muted">Loading matches...</p>
+      </div>
+    </section>
+
+    <h2 class="section-title">About the Analysis</h2>
     <section class="panel">
       <p class="muted">
-        Goal forecasts are not available yet. This section will use
-        historical results and a statistical model rather than guesses.
+        Recent matches receive more weight than older matches.
+        Team statistics include scoring, conceding, home and away
+        performance, and recent results. These describe historical
+        performance; they are not guarantees of future results.
+      </p>
+      <p class="meta">
+        Goal estimates will be added after the statistical model
+        and its accuracy have been tested.
       </p>
     </section>
   </main>
@@ -132,17 +315,21 @@
   </footer>
 
   <script>
-    const matchesBox = document.getElementById("matches");
-    const message = document.getElementById("message");
-    const refreshButton = document.getElementById("refresh");
+    const $ = id => document.getElementById(id);
 
-    function formatDate(dateString) {
-      return new Date(dateString).toLocaleString("en-GB", {
-        dateStyle: "medium",
-        timeStyle: "short",
-        timeZone: "Africa/Accra"
-      }) + " GMT";
-    }
+    const competitionSelect = $("competition");
+    const seasonsSelect = $("seasons");
+    const loadStatsButton = $("loadStats");
+    const statsMessage = $("statsMessage");
+    const overview = $("overview");
+    const teamSelect = $("teamSelect");
+    const teamDetail = $("teamDetail");
+    const teamTable = $("teamTable");
+    const matchesBox = $("matches");
+    const matchMessage = $("matchMessage");
+    const refreshMatchesButton = $("refreshMatches");
+
+    let currentStats = null;
 
     function escapeHTML(value) {
       return String(value ?? "").replace(/[&<>"']/g, char => ({
@@ -154,9 +341,209 @@
       })[char]);
     }
 
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      if (Number.isNaN(date.getTime())) return "Date unavailable";
+
+      return date.toLocaleString("en-GB", {
+        dateStyle: "medium",
+        timeStyle: "short",
+        timeZone: "Africa/Accra"
+      }) + " GMT";
+    }
+
+    function number(value) {
+      return Number.isFinite(Number(value))
+        ? Number(value).toFixed(2)
+        : "—";
+    }
+
+    function showOverview(data) {
+      const league = data.league || {};
+
+      overview.innerHTML = `
+        <div class="stat">
+          <div class="stat-label">Matches analysed</div>
+          <div class="stat-value green">${number(data.matchesAnalysed)}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Goals per match</div>
+          <div class="stat-value">${number(league.averageGoalsPerMatch)}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Weighted goals per team</div>
+          <div class="stat-value">${number(league.weightedAverageGoalsPerTeamPerMatch)}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Teams in dataset</div>
+          <div class="stat-value">${(data.teams || []).length}</div>
+        </div>
+      `;
+    }
+
+    function renderTeamTable(teams) {
+      if (!teams.length) {
+        teamTable.innerHTML = '<p class="muted">No team statistics available.</p>';
+        return;
+      }
+
+      teamTable.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Team</th>
+              <th>Played</th>
+              <th>Scored</th>
+              <th>Conceded</th>
+              <th>Goals/game</th>
+              <th>Conceded/game</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${teams.map(team => `
+              <tr>
+                <td>${escapeHTML(team.name)}</td>
+                <td>${number(team.matches)}</td>
+                <td>${number(team.goalsScored)}</td>
+                <td>${number(team.goalsConceded)}</td>
+                <td>${number(team.weightedGoalsPerMatch)}</td>
+                <td>${number(team.weightedConcededPerMatch)}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function showTeamDetail(team) {
+      if (!team) {
+        teamDetail.innerHTML = '<p class="muted">Choose a team to inspect its statistics.</p>';
+        return;
+      }
+
+      const recent = team.recentForm || [];
+
+      teamDetail.innerHTML = `
+        <h3>${escapeHTML(team.name)}</h3>
+        <div class="stats-grid">
+          <div class="stat">
+            <div class="stat-label">Weighted goals scored/game</div>
+            <div class="stat-value green">${number(team.weightedGoalsPerMatch)}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Weighted goals conceded/game</div>
+            <div class="stat-value">${number(team.weightedConcededPerMatch)}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Home scoring average</div>
+            <div class="stat-value">${number(team.home?.weightedGoalsPerMatch)}</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Away scoring average</div>
+            <div class="stat-value">${number(team.away?.weightedGoalsPerMatch)}</div>
+          </div>
+        </div>
+
+        <h3 style="margin-top:22px">Recent Form</h3>
+        ${recent.length ? `
+          <div class="form-row">
+            ${recent.map(match => `
+              <span class="form-badge ${
+                match.result === "W" ? "win" :
+                match.result === "D" ? "draw" : "loss"
+              }">${escapeHTML(match.result)}</span>
+            `).join("")}
+          </div>
+          <div style="margin-top:12px">
+            ${recent.map(match => `
+              <p class="meta">
+                ${escapeHTML(formatDate(match.date))} ·
+                ${escapeHTML(match.venue)} vs ${escapeHTML(match.opponent)}:
+                <strong>${number(match.goalsFor)} - ${number(match.goalsAgainst)}</strong>
+                (${escapeHTML(match.result)})
+              </p>
+            `).join("")}
+          </div>
+        ` : '<p class="muted">No recent form data available.</p>'}
+      `;
+    }
+
+    function updateTeamSelector(teams) {
+      teamSelect.innerHTML = "";
+
+      if (!teams.length) {
+        teamSelect.add(new Option("No teams available", ""));
+        teamSelect.disabled = true;
+        showTeamDetail(null);
+        return;
+      }
+
+      teams.forEach(team => {
+        teamSelect.add(new Option(team.name, String(team.id)));
+      });
+
+      teamSelect.disabled = false;
+      showTeamDetail(teams[0]);
+    }
+
+    async function loadStatistics() {
+      loadStatsButton.disabled = true;
+      statsMessage.textContent = "Loading historical statistics...";
+      overview.innerHTML = '<div class="empty">Analysing matches...</div>';
+      teamTable.innerHTML = '<p class="muted">Loading team data...</p>';
+
+      try {
+        const code = encodeURIComponent(competitionSelect.value);
+        const seasons = encodeURIComponent(seasonsSelect.value);
+
+        const response = await fetch(
+          `/api/statistics?competition=${code}&seasons=${seasons}`
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Unable to load statistics.");
+        }
+
+        currentStats = data;
+        const teams = data.teams || [];
+
+        if (!data.matchesAnalysed || !teams.length) {
+          overview.innerHTML = '<div class="empty">No completed matches were available for this selection.</div>';
+          teamTable.innerHTML = '<p class="muted">Try another competition or season selection.</p>';
+          updateTeamSelector([]);
+          statsMessage.textContent =
+            (data.message || "No statistics available.") +
+            (data.seasonErrors?.length ? " Some seasons could not be retrieved." : "");
+          return;
+        }
+
+        showOverview(data);
+        renderTeamTable(teams);
+        updateTeamSelector(teams);
+
+        const seasonsUsed = (data.seasonsRequested || []).join(", ");
+        statsMessage.textContent =
+          `${data.matchesAnalysed} completed matches analysed · Seasons requested: ${seasonsUsed}` +
+          (data.seasonErrors?.length
+            ? ` · ${data.seasonErrors.length} season request(s) unavailable`
+            : "");
+
+      } catch (error) {
+        overview.innerHTML =
+          `<div class="empty error">${escapeHTML(error.message)}</div>`;
+        teamTable.innerHTML =
+          '<p class="error">Could not load team data. Try again later.</p>';
+        statsMessage.textContent = "Statistics could not be loaded.";
+      } finally {
+        loadStatsButton.disabled = false;
+      }
+    }
+
     async function loadMatches() {
-      refreshButton.disabled = true;
-      message.textContent = "Loading match data...";
+      refreshMatchesButton.disabled = true;
+      matchMessage.textContent = "Loading match data...";
       matchesBox.innerHTML = "";
 
       try {
@@ -168,13 +555,12 @@
         }
 
         const matches = data.matches || [];
+        matchMessage.textContent =
+          `Data retrieved successfully · ${matches.length} match(es)`;
 
-        message.textContent =
-          "Data retrieved successfully · " + matches.length + " match(es)";
-
-        if (matches.length === 0) {
+        if (!matches.length) {
           matchesBox.innerHTML =
-            '<div class="panel">No matches were returned by the data service.</div>';
+            '<div class="empty">No matches were returned by the data service.</div>';
           return;
         }
 
@@ -199,24 +585,35 @@
                 ? `${score.home} - ${score.away}`
                 : "vs"}</p>
               <div class="status">${status}</div>
-              <p class="meta">Kickoff: ${formatDate(match.utcDate)}</p>
+              <p class="meta">Kickoff: ${escapeHTML(formatDate(match.utcDate))}</p>
             </article>
           `;
         }).join("");
 
       } catch (error) {
-        message.textContent = "Unable to load match data.";
+        matchMessage.textContent = "Unable to load match data.";
         matchesBox.innerHTML =
-          '<div class="panel error">' +
-          escapeHTML(error.message) +
-          '<p class="muted">Try refreshing. If the problem continues, check the API endpoint.</p>' +
-          '</div>';
+          `<div class="panel error">${escapeHTML(error.message)}
+          <p class="muted">Try refreshing. If the problem continues, check the API endpoint.</p></div>`;
       } finally {
-        refreshButton.disabled = false;
+        refreshMatchesButton.disabled = false;
       }
     }
 
-    refreshButton.addEventListener("click", loadMatches);
+    teamSelect.addEventListener("change", () => {
+      if (!currentStats) return;
+
+      const team = (currentStats.teams || []).find(
+        item => String(item.id) === teamSelect.value
+      );
+
+      showTeamDetail(team);
+    });
+
+    loadStatsButton.addEventListener("click", loadStatistics);
+    refreshMatchesButton.addEventListener("click", loadMatches);
+
+    loadStatistics();
     loadMatches();
   </script>
 </body>
