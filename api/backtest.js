@@ -1,350 +1,254 @@
 
 const API_BASE = "https://api.football-data.org/v4";
+const SHRINKAGE_MATCHES = 6;
 
-const COMPETITIONS = [
-  "BSA", "ELC", "PL", "CL", "EC", "FL1",
-  "BL1", "SA", "DED", "PPL", "CLI", "PD", "WC"
-];
+const ALLOWED_CODES = new Set([
+  "BSA", "ELC", "PL", "CL", "EC", "FL1", "BL1",
+  "SA", "DED", "PPL", "CLI", "PD", "WC"
+]);
 
-function poissonProbability(lambda, goals) {
-  if (lambda <= 0) return goals === 0 ? 1 : 0;
+function validMatch(match) {
+  const home = match.score?.fullTime?.home;
+  const away = match.score?.fullTime?.away;
 
-  let probability = Math.exp(-lambda);
+  return (
+    match.status === "FINISHED" &&
+    match.homeTeam?.id != null &&
+    match.awayTeam?.id != null &&
+    Number.isInteger(home) &&
+    Number.isInteger(away) &&
+    home >= 0 &&
+    away >= 0
+  );
+}
 
-  for (let i = 1; i <= goals; i++) {
-    probability *= lambda / i;
+function poissonLogProbability(goals, lambda) {
+  lambda = Math.max(0.05, lambda);
+
+  let logFactorial = 0;
+  for (let i = 2; i <= goals; i++) {
+    logFactorial += Math.log(i);
   }
 
-  return probability;
+  return goals * Math.log(lambda) - lambda - logFactorial;
 }
 
-function poissonLogLoss(lambda, actualGoals) {
-  const probability = Math.max(
-    poissonProbability(lambda, actualGoals),
-    1e-12
-  );
+function createTeamStats(matches) {
+  const teams = new Map();
 
-  return -Math.log(probability);
-}
+  function getTeam(id) {
+    if (!teams.has(id)) {
+      teams.set(id, {
+        homePlayed: 0,
+        awayPlayed: 0,
+        homeScored: 0,
+        homeConceded: 0,
+        awayScored: 0,
+        awayConceded: 0
+      });
+    }
+    return teams.get(id);
+  }
 
-function mean(values) {
-  if (!values.length) return null;
+  let homeGoals = 0;
+  let awayGoals = 0;
 
-  return values.reduce((sum, value) => sum + value, 0) /
-    values.length;
-}
-
-function fitModel(history) {
-  const teams = {};
-
-  let totalHome = 0;
-  let totalAway = 0;
-
-  for (const match of history) {
-    const home = match.homeTeam.name;
-    const away = match.awayTeam.name;
+  for (const match of matches) {
+    const home = getTeam(match.homeTeam.id);
+    const away = getTeam(match.awayTeam.id);
     const hg = match.score.fullTime.home;
     const ag = match.score.fullTime.away;
 
-    if (hg == null || ag == null) continue;
+    home.homePlayed++;
+    home.homeScored += hg;
+    home.homeConceded += ag;
 
-    if (!teams[home]) {
-      teams[home] = {
-        homeGF: 0, homeGA: 0, homeN: 0,
-        awayGF: 0, awayGA: 0, awayN: 0
-      };
-    }
+    away.awayPlayed++;
+    away.awayScored += ag;
+    away.awayConceded += hg;
 
-    if (!teams[away]) {
-      teams[away] = {
-        homeGF: 0, homeGA: 0, homeN: 0,
-        awayGF: 0, awayGA: 0, awayN: 0
-      };
-    }
-
-    teams[home].homeGF += hg;
-    teams[home].homeGA += ag;
-    teams[home].homeN++;
-
-    teams[away].awayGF += ag;
-    teams[away].awayGA += hg;
-    teams[away].awayN++;
-
-    totalHome += hg;
-    totalAway += ag;
-  }
-
-  const n = history.length;
-
-  if (!n) return null;
-
-  const homeRate = totalHome / n;
-  const awayRate = totalAway / n;
-
-  for (const team of Object.values(teams)) {
-    team.homeAttack = team.homeN
-      ? (team.homeGF / team.homeN) / (homeRate || 1)
-      : 1;
-
-    team.homeDefence = team.homeN
-      ? (team.homeGA / team.homeN) / (awayRate || 1)
-      : 1;
-
-    team.awayAttack = team.awayN
-      ? (team.awayGF / team.awayN) / (awayRate || 1)
-      : 1;
-
-    team.awayDefence = team.awayN
-      ? (team.awayGA / team.awayN) / (homeRate || 1)
-      : 1;
-  }
-
-  return { teams, homeRate, awayRate };
-}
-
-function estimateGoals(model, homeName, awayName) {
-  const home = model.teams[homeName];
-  const away = model.teams[awayName];
-
-  if (!home || !away) {
-    return {
-      home: model.homeRate,
-      away: model.awayRate
-    };
+    homeGoals += hg;
+    awayGoals += ag;
   }
 
   return {
-    home: Math.max(
-      0.05,
-      model.homeRate * home.homeAttack * away.awayDefence
-    ),
-    away: Math.max(
-      0.05,
-      model.awayRate * away.awayAttack * home.homeDefence
-    )
+    teams,
+    leagueHome: matches.length ? homeGoals / matches.length : 1.35,
+    leagueAway: matches.length ? awayGoals / matches.length : 1.10
+  };
+}
+
+function smoothedFactor(teamRate, leagueRate, games) {
+  if (!games || !leagueRate) return 1;
+
+  const rawFactor = teamRate / leagueRate;
+  const weight = games / (games + SHRINKAGE_MATCHES);
+
+  return 1 + (rawFactor - 1) * weight;
+}
+
+function predict(homeId, awayId, stats) {
+  const home = stats.teams.get(homeId);
+  const away = stats.teams.get(awayId);
+
+  const homeAttack = home
+    ? smoothedFactor(home.homeScored / Math.max(1, home.homePlayed), stats.leagueHome, home.homePlayed)
+    : 1;
+
+  const homeDefence = home
+    ? smoothedFactor(home.homeConceded / Math.max(1, home.homePlayed), stats.leagueAway, home.homePlayed)
+    : 1;
+
+  const awayAttack = away
+    ? smoothedFactor(away.awayScored / Math.max(1, away.awayPlayed), stats.leagueAway, away.awayPlayed)
+    : 1;
+
+  const awayDefence = away
+    ? smoothedFactor(away.awayConceded / Math.max(1, away.awayPlayed), stats.leagueHome, away.awayPlayed)
+    : 1;
+
+  return {
+    home: Math.max(0.05, stats.leagueHome * homeAttack * awayDefence),
+    away: Math.max(0.05, stats.leagueAway * awayAttack * homeDefence)
+  };
+}
+
+function calculateMetrics(results) {
+  let absoluteError = 0;
+  let logLoss = 0;
+  let observations = 0;
+
+  for (const result of results) {
+    absoluteError +=
+      Math.abs(result.predicted.home - result.actual.home) +
+      Math.abs(result.predicted.away - result.actual.away);
+
+    logLoss -=
+      poissonLogProbability(result.actual.home, result.predicted.home) +
+      poissonLogProbability(result.actual.away, result.predicted.away);
+
+    observations += 2;
+  }
+
+  return {
+    meanAbsoluteError: Number((absoluteError / observations).toFixed(4)),
+    meanPoissonLogLoss: Number((logLoss / results.length).toFixed(4))
   };
 }
 
 export default async function handler(req, res) {
-  if (req.method !== "GET") {
-    return res.status(405).json({
-      error: "Use GET for this endpoint."
-    });
-  }
-
-  const competition = String(
-    req.query.competition || "PL"
-  ).toUpperCase();
-
-  const requestedMatches = Number(req.query.matches || 100);
-
-  if (!COMPETITIONS.includes(competition)) {
-    return res.status(400).json({
-      error: "Unsupported competition code.",
-      supportedCompetitions: COMPETITIONS
-    });
-  }
-
-  if (
-    !Number.isInteger(requestedMatches) ||
-    requestedMatches < 30 ||
-    requestedMatches > 300
-  ) {
-    return res.status(400).json({
-      error: "matches must be an integer between 30 and 300."
-    });
-  }
-
-  const token = process.env.FOOTBALL_DATA_API_KEY;
-
-  if (!token) {
-    return res.status(500).json({
-      error: "FOOTBALL_DATA_API_KEY is not configured."
-    });
-  }
-
   try {
-    // No season parameter: request the provider's default
-    // current season, rather than restricted historical years.
-    const url =
-      `${API_BASE}/competitions/${competition}/matches?status=FINISHED`;
+    const competition = String(req.query.competition || "PL").toUpperCase();
+    const requestedMatches = Number(req.query.matches || 100);
+
+    if (!ALLOWED_CODES.has(competition)) {
+      return res.status(400).json({ error: "Unsupported competition code." });
+    }
+
+    if (!Number.isInteger(requestedMatches) || requestedMatches < 30 || requestedMatches > 300) {
+      return res.status(400).json({ error: "matches must be an integer between 30 and 300." });
+    }
+
+    const apiKey = process.env.FOOTBALL_DATA_API_KEY;
+
+    if (!apiKey) {
+      return res.status(500).json({ error: "FOOTBALL_DATA_API_KEY is not configured." });
+    }
+
+    const url = `${API_BASE}/competitions/${competition}/matches?status=FINISHED`;
 
     const response = await fetch(url, {
-      headers: {
-        "X-Auth-Token": token
-      }
+      headers: { "X-Auth-Token": apiKey }
     });
 
     if (!response.ok) {
       const providerMessage = await response.text();
 
-      return res.status(502).json({
-        error: "Current-season data request failed.",
+      return res.status(response.status === 403 ? 403 : 502).json({
+        error: "Football data provider request failed.",
         competition,
         providerStatus: response.status,
         providerMessage
       });
     }
 
-    const data = await response.json();
+    const payload = await response.json();
 
-    const uniqueMatches = Array.from(
-      new Map(
-        (data.matches || []).map(match => [match.id, match])
-      ).values()
-    )
-      .filter(match =>
-        match.status === "FINISHED" &&
-        match.score?.fullTime?.home != null &&
-        match.score?.fullTime?.away != null &&
-        match.homeTeam?.name &&
-        match.awayTeam?.name &&
-        match.utcDate
-      )
-      .sort(
-        (a, b) =>
-          new Date(a.utcDate) - new Date(b.utcDate)
-      );
+    const matches = (payload.matches || [])
+      .filter(validMatch)
+      .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
 
-    if (uniqueMatches.length < 31) {
-      return res.status(200).json({
+    if (matches.length < 31) {
+      return res.status(422).json({
+        error: "Not enough completed matches for backtesting.",
         competition,
-        season: data.matches?.[0]?.season || null,
-        message:
-          "Not enough completed current-season matches yet.",
-        matchesFound: uniqueMatches.length,
-        matchesRequired: 31,
-        explanation:
-          "The model needs at least 30 earlier matches before evaluating a later match."
+        matchesAvailable: matches.length,
+        minimumRequired: 31
       });
     }
 
-    const selected = uniqueMatches.slice(-requestedMatches);
-    const predictions = [];
+    const testCount = Math.min(requestedMatches, matches.length - 30);
+    const firstTestIndex = matches.length - testCount;
+    const results = [];
+    const baselineResults = [];
 
-    // Each match is evaluated using only earlier matches.
-    for (const target of selected) {
-      const targetDate = new Date(target.utcDate);
-
-      const history = uniqueMatches.filter(
-        match => new Date(match.utcDate) < targetDate
-      );
+    for (let index = firstTestIndex; index < matches.length; index++) {
+      const history = matches.slice(0, index);
+      const target = matches[index];
 
       if (history.length < 30) continue;
 
-      const model = fitModel(history);
+      const stats = createTeamStats(history);
 
-      if (!model) continue;
-
-      const actualHome = target.score.fullTime.home;
-      const actualAway = target.score.fullTime.away;
-
-      const expected = estimateGoals(
-        model,
-        target.homeTeam.name,
-        target.awayTeam.name
+      const modelPrediction = predict(
+        target.homeTeam.id,
+        target.awayTeam.id,
+        stats
       );
 
-      predictions.push({
-        date: target.utcDate,
-        homeTeam: target.homeTeam.name,
-        awayTeam: target.awayTeam.name,
+      const baselinePrediction = {
+        home: Math.max(0.05, stats.leagueHome),
+        away: Math.max(0.05, stats.leagueAway)
+      };
 
-        actual: {
-          home: actualHome,
-          away: actualAway
-        },
+      const actual = {
+        home: target.score.fullTime.home,
+        away: target.score.fullTime.away
+      };
 
-        expected: {
-          home: Number(expected.home.toFixed(3)),
-          away: Number(expected.away.toFixed(3))
-        },
+      results.push({ predicted: modelPrediction, actual });
+      baselineResults.push({ predicted: baselinePrediction, actual });
+    }
 
-        baseline: {
-          home: Number(model.homeRate.toFixed(3)),
-          away: Number(model.awayRate.toFixed(3))
-        },
-
-        trainingMatches: history.length
+    if (!results.length) {
+      return res.status(422).json({
+        error: "No matches could be evaluated.",
+        matchesAvailable: matches.length
       });
     }
 
-    if (!predictions.length) {
-      return res.status(200).json({
-        competition,
-        message: "No matches qualified for evaluation.",
-        matchesAvailable: uniqueMatches.length
-      });
-    }
-
-    const modelErrors = [];
-    const baselineErrors = [];
-    const modelLosses = [];
-    const baselineLosses = [];
-
-    for (const prediction of predictions) {
-      for (const side of ["home", "away"]) {
-        const actual = prediction.actual[side];
-        const predicted = prediction.expected[side];
-        const baseline = prediction.baseline[side];
-
-        modelErrors.push(Math.abs(actual - predicted));
-        baselineErrors.push(Math.abs(actual - baseline));
-
-        modelLosses.push(
-          poissonLogLoss(predicted, actual)
-        );
-
-        baselineLosses.push(
-          poissonLogLoss(baseline, actual)
-        );
-      }
-    }
+    const season = matches.find(match => match.season)?.season || null;
 
     return res.status(200).json({
       competition,
-
-      season: data.matches?.[0]?.season || null,
-
-      method:
-        "Current-season chronological expanding-window Poisson backtest",
-
-      matchesAvailable: uniqueMatches.length,
-      matchesEvaluated: predictions.length,
-
-      firstTestMatch: predictions[0].date,
-
-      lastTestMatch:
-        predictions[predictions.length - 1].date,
-
+      season,
+      method: "Regularised home/away Poisson model with chronological expanding-window backtest",
+      modelVersion: "Poisson v2",
+      shrinkageMatches: SHRINKAGE_MATCHES,
+      matchesAvailable: matches.length,
+      matchesEvaluated: results.length,
+      firstTestMatch: matches[firstTestIndex]?.utcDate || null,
+      lastTestMatch: matches[matches.length - 1]?.utcDate || null,
       metrics: {
-        poissonModel: {
-          meanAbsoluteError: Number(
-            mean(modelErrors).toFixed(4)
-          ),
-          meanPoissonLogLoss: Number(
-            mean(modelLosses).toFixed(4)
-          )
-        },
-
-        leagueAverageBaseline: {
-          meanAbsoluteError: Number(
-            mean(baselineErrors).toFixed(4)
-          ),
-          meanPoissonLogLoss: Number(
-            mean(baselineLosses).toFixed(4)
-          )
-        }
+        poissonModel: calculateMetrics(results),
+        leagueAverageBaseline: calculateMetrics(baselineResults)
       },
-
-      note:
-        "Exploratory current-season historical evaluation. Lower MAE and lower Poisson log loss are better. Results do not guarantee future accuracy."
+      note: "Exploratory current-season evaluation. Lower MAE and lower Poisson log loss are better. Each prediction uses only earlier completed matches. Results do not guarantee future accuracy."
     });
-
   } catch (error) {
     return res.status(500).json({
       error: "Backtest failed.",
-      details: error.message
+      message: error.message
     });
   }
 }
