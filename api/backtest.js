@@ -18,21 +18,20 @@ function poissonProbability(lambda, goals) {
   return probability;
 }
 
-function mean(values) {
-  return values.length
-    ? values.reduce((sum, value) => sum + value, 0) / values.length
-    : null;
-}
-
 function poissonLogLoss(lambda, actualGoals) {
-  // Negative log probability of the observed goal count.
-  // Clamp the probability to avoid log(0).
   const probability = Math.max(
     poissonProbability(lambda, actualGoals),
     1e-12
   );
 
   return -Math.log(probability);
+}
+
+function mean(values) {
+  if (!values.length) return null;
+
+  return values.reduce((sum, value) => sum + value, 0) /
+    values.length;
 }
 
 function fitModel(history) {
@@ -49,32 +48,38 @@ function fitModel(history) {
 
     if (hg == null || ag == null) continue;
 
-    totalHome += hg;
-    totalAway += ag;
-
     if (!teams[home]) {
-      teams[home] = { homeGF: 0, homeGA: 0, homeN: 0, awayGF: 0, awayGA: 0, awayN: 0 };
+      teams[home] = {
+        homeGF: 0, homeGA: 0, homeN: 0,
+        awayGF: 0, awayGA: 0, awayN: 0
+      };
     }
 
     if (!teams[away]) {
-      teams[away] = { homeGF: 0, homeGA: 0, homeN: 0, awayGF: 0, awayGA: 0, awayN: 0 };
+      teams[away] = {
+        homeGF: 0, homeGA: 0, homeN: 0,
+        awayGF: 0, awayGA: 0, awayN: 0
+      };
     }
 
     teams[home].homeGF += hg;
     teams[home].homeGA += ag;
-    teams[home].homeN += 1;
+    teams[home].homeN++;
 
     teams[away].awayGF += ag;
     teams[away].awayGA += hg;
-    teams[away].awayN += 1;
+    teams[away].awayN++;
+
+    totalHome += hg;
+    totalAway += ag;
   }
 
   const n = history.length;
+
   if (!n) return null;
 
   const homeRate = totalHome / n;
   const awayRate = totalAway / n;
-  const overallRate = (totalHome + totalAway) / (2 * n);
 
   for (const team of Object.values(teams)) {
     team.homeAttack = team.homeN
@@ -94,7 +99,7 @@ function fitModel(history) {
       : 1;
   }
 
-  return { teams, homeRate, awayRate, overallRate };
+  return { teams, homeRate, awayRate };
 }
 
 function estimateGoals(model, homeName, awayName) {
@@ -122,10 +127,15 @@ function estimateGoals(model, homeName, awayName) {
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
-    return res.status(405).json({ error: "Use GET for this endpoint." });
+    return res.status(405).json({
+      error: "Use GET for this endpoint."
+    });
   }
 
-  const competition = String(req.query.competition || "PL").toUpperCase();
+  const competition = String(
+    req.query.competition || "PL"
+  ).toUpperCase();
+
   const requestedMatches = Number(req.query.matches || 100);
 
   if (!COMPETITIONS.includes(competition)) {
@@ -135,9 +145,11 @@ export default async function handler(req, res) {
     });
   }
 
-  if (!Number.isInteger(requestedMatches) ||
-      requestedMatches < 30 ||
-      requestedMatches > 300) {
+  if (
+    !Number.isInteger(requestedMatches) ||
+    requestedMatches < 30 ||
+    requestedMatches > 300
+  ) {
     return res.status(400).json({
       error: "matches must be an integer between 30 and 300."
     });
@@ -152,38 +164,34 @@ export default async function handler(req, res) {
   }
 
   try {
-    const currentYear = new Date().getUTCFullYear();
-    const matches = [];
+    // No season parameter: request the provider's default
+    // current season, rather than restricted historical years.
+    const url =
+      `${API_BASE}/competitions/${competition}/matches?status=FINISHED`;
 
-    // Fetch completed matches across recent calendar-year ranges.
-    for (let offset = 0; offset < 3; offset++) {
-      const year = currentYear - offset;
-      const url = `${API_BASE}/competitions/${competition}/matches?dateFrom=${year}-01-01&dateTo=${year}-12-31&status=FINISHED`;
-
-      const response = await fetch(url, {
-        headers: { "X-Auth-Token": token }
-      });
-
-      if (!response.ok) {
-  const providerMessage = await response.text();
-
-  return res.status(502).json({
-    error: "The football data provider rejected a historical data request.",
-    competition,
-    failedYear: year,
-    providerStatus: response.status,
-    providerMessage,
-    explanation:
-      "Check API-key validity and access to this competition and date range. No model metrics were calculated."
-       });
+    const response = await fetch(url, {
+      headers: {
+        "X-Auth-Token": token
       }
+    });
 
-      const data = await response.json();
-      matches.push(...(data.matches || []));
+    if (!response.ok) {
+      const providerMessage = await response.text();
+
+      return res.status(502).json({
+        error: "Current-season data request failed.",
+        competition,
+        providerStatus: response.status,
+        providerMessage
+      });
     }
 
+    const data = await response.json();
+
     const uniqueMatches = Array.from(
-      new Map(matches.map(match => [match.id, match])).values()
+      new Map(
+        (data.matches || []).map(match => [match.id, match])
+      ).values()
     )
       .filter(match =>
         match.status === "FINISHED" &&
@@ -193,37 +201,45 @@ export default async function handler(req, res) {
         match.awayTeam?.name &&
         match.utcDate
       )
-      .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
+      .sort(
+        (a, b) =>
+          new Date(a.utcDate) - new Date(b.utcDate)
+      );
 
     if (uniqueMatches.length < 31) {
       return res.status(200).json({
         competition,
-        message: "Not enough completed matches for a chronological backtest.",
+        season: data.matches?.[0]?.season || null,
+        message:
+          "Not enough completed current-season matches yet.",
         matchesFound: uniqueMatches.length,
-        minimumRequired: 31
+        matchesRequired: 31,
+        explanation:
+          "The model needs at least 30 earlier matches before evaluating a later match."
       });
     }
 
-    // Keep the newest requested number of matches, in date order.
     const selected = uniqueMatches.slice(-requestedMatches);
     const predictions = [];
 
-    // Every prediction uses only matches played before the target match.
-    for (let i = 0; i < selected.length; i++) {
-      const target = selected[i];
+    // Each match is evaluated using only earlier matches.
+    for (const target of selected) {
+      const targetDate = new Date(target.utcDate);
 
       const history = uniqueMatches.filter(
-        match => new Date(match.utcDate) < new Date(target.utcDate)
+        match => new Date(match.utcDate) < targetDate
       );
 
       if (history.length < 30) continue;
 
       const model = fitModel(history);
+
       if (!model) continue;
 
       const actualHome = target.score.fullTime.home;
       const actualAway = target.score.fullTime.away;
-      const estimated = estimateGoals(
+
+      const expected = estimateGoals(
         model,
         target.homeTeam.name,
         target.awayTeam.name
@@ -233,15 +249,31 @@ export default async function handler(req, res) {
         date: target.utcDate,
         homeTeam: target.homeTeam.name,
         awayTeam: target.awayTeam.name,
-        actual: { home: actualHome, away: actualAway },
-        expected: {
-          home: Number(estimated.home.toFixed(3)),
-          away: Number(estimated.away.toFixed(3))
+
+        actual: {
+          home: actualHome,
+          away: actualAway
         },
+
+        expected: {
+          home: Number(expected.home.toFixed(3)),
+          away: Number(expected.away.toFixed(3))
+        },
+
         baseline: {
           home: Number(model.homeRate.toFixed(3)),
           away: Number(model.awayRate.toFixed(3))
-        }
+        },
+
+        trainingMatches: history.length
+      });
+    }
+
+    if (!predictions.length) {
+      return res.status(200).json({
+        competition,
+        message: "No matches qualified for evaluation.",
+        matchesAvailable: uniqueMatches.length
       });
     }
 
@@ -259,30 +291,56 @@ export default async function handler(req, res) {
         modelErrors.push(Math.abs(actual - predicted));
         baselineErrors.push(Math.abs(actual - baseline));
 
-        modelLosses.push(poissonLogLoss(predicted, actual));
-        baselineLosses.push(poissonLogLoss(baseline, actual));
+        modelLosses.push(
+          poissonLogLoss(predicted, actual)
+        );
+
+        baselineLosses.push(
+          poissonLogLoss(baseline, actual)
+        );
       }
     }
 
     return res.status(200).json({
       competition,
-      method: "Chronological expanding-window Poisson backtest",
+
+      season: data.matches?.[0]?.season || null,
+
+      method:
+        "Current-season chronological expanding-window Poisson backtest",
+
       matchesAvailable: uniqueMatches.length,
       matchesEvaluated: predictions.length,
-      firstTestMatch: predictions[0]?.date || null,
-      lastTestMatch: predictions[predictions.length - 1]?.date || null,
+
+      firstTestMatch: predictions[0].date,
+
+      lastTestMatch:
+        predictions[predictions.length - 1].date,
+
       metrics: {
         poissonModel: {
-          meanAbsoluteError: mean(modelErrors),
-          meanPoissonLogLoss: mean(modelLosses)
+          meanAbsoluteError: Number(
+            mean(modelErrors).toFixed(4)
+          ),
+          meanPoissonLogLoss: Number(
+            mean(modelLosses).toFixed(4)
+          )
         },
+
         leagueAverageBaseline: {
-          meanAbsoluteError: mean(baselineErrors),
-          meanPoissonLogLoss: mean(baselineLosses)
+          meanAbsoluteError: Number(
+            mean(baselineErrors).toFixed(4)
+          ),
+          meanPoissonLogLoss: Number(
+            mean(baselineLosses).toFixed(4)
+          )
         }
       },
-      note: "Exploratory historical evaluation, not a guarantee of future accuracy. Team rates are simple averages without time weighting."
+
+      note:
+        "Exploratory current-season historical evaluation. Lower MAE and lower Poisson log loss are better. Results do not guarantee future accuracy."
     });
+
   } catch (error) {
     return res.status(500).json({
       error: "Backtest failed.",
@@ -290,4 +348,3 @@ export default async function handler(req, res) {
     });
   }
 }
-
