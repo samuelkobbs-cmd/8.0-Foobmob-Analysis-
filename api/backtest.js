@@ -165,11 +165,17 @@ export default async function handler(req, res) {
       });
 
       if (!response.ok) {
-        return res.status(response.status).json({
-          error: "Football data provider request failed.",
-          providerStatus: response.status,
-          year
-        });
+  const providerMessage = await response.text();
+
+  return res.status(502).json({
+    error: "The football data provider rejected a historical data request.",
+    competition,
+    failedYear: year,
+    providerStatus: response.status,
+    providerMessage,
+    explanation:
+      "Check API-key validity and access to this competition and date range. No model metrics were calculated."
+       });
       }
 
       const data = await response.json();
