@@ -1,1 +1,1 @@
-<title>Samuel's Analytics | Football Analytics</title>
+Samuel's Analytics 
